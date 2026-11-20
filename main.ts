@@ -29,6 +29,8 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /** The first wait between retries, and the longest. */
 const RETRY_INITIAL_MS = 250;
 const RETRY_MAX_MS = 2_000;
+/** Register statuses that are contract errors, so they end the loop instead of retrying. */
+const REGISTER_FATAL_STATUSES = new Set([400, 405]);
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,7 +54,7 @@ async function register(port: number): Promise<void> {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       if (res.status === 200 || res.status === 409) return;
-      if (res.status === 400 || res.status === 405) throw new Error(`register answered HTTP ${res.status}: ${await res.text()}`);
+      if (REGISTER_FATAL_STATUSES.has(res.status)) throw new Error(`register answered HTTP ${res.status}: ${await res.text()}`);
     } catch (err) {
       if (err instanceof Error && err.message.startsWith('register answered HTTP ')) throw err;
     }
